@@ -1,6 +1,30 @@
 import pandas as pd
 import streamlit as st
 
+
+
+
+def calc_financial_metrics(df:pd.DataFrame):
+    
+    df_data = df.groupby(by="Data")[["Valor"]].sum()
+    df_data["lag_1"] = df_data["Valor"].shift(1)
+    df_data["Diferença mensal Abs."] = df_data["Valor"] - df_data["lag_1"]
+    df_data["Média 6m Diferença mensal Abs."] = df_data['Diferença mensal Abs.'].rolling(6).mean()
+    df_data["Média 12m Diferença mensal Abs."] = df_data['Diferença mensal Abs.'].rolling(12).mean()
+    df_data["Média 24m Diferença mensal Abs."] = df_data['Diferença mensal Abs.'].rolling(54).mean()
+    df_data["Diferença mensal Rel."] = df_data["Valor"] / df_data["lag_1"] - 1
+    df_data["Evolução 6m Total"] = df_data['Valor'].rolling(6).apply(lambda x:   x.iloc[-1] - x.iloc[0])
+    df_data["Evolução 12m Total"] = df_data['Valor'].rolling(12).apply(lambda x: x.iloc[-1] - x.iloc[0])
+    df_data["Evolução 24m Total"] = df_data['Valor'].rolling(54).apply(lambda x: x.iloc[-1] - x.iloc[0])
+    df_data["Evolução 6m Rel."] = df_data['Valor'].rolling(6).apply(lambda x:   x.iloc[-1] / x.iloc[0] - 1)
+    df_data["Evolução 12m Rel."] = df_data['Valor'].rolling(12).apply(lambda x: x.iloc[-1] / x.iloc[0] - 1)
+    df_data["Evolução 24m Rel."] = df_data['Valor'].rolling(54).apply(lambda x: x.iloc[-1] / x.iloc[0] - 1)
+
+    df_data = df_data.drop("lag_1", axis=1)
+
+    return df_data
+
+
 st.set_page_config(page_title="Finanças", page_icon=":moneybag:", layout="wide")
 
 
@@ -46,20 +70,27 @@ if file_upload:
             st.bar_chart(df_instituicao.loc[date])
 
 
-    df_data = df.groupby(by="Data")[["Valor"]].sum()
-    df_data["lag_1"] = df_data["Valor"].shift(1)
-    df_data["Diferença mensal"] = df_data["Valor"] - df_data["lag_1"]
-    df_data["Média 6m Diferença mensal"] = df_data['Diferença mensal'].rolling(6).mean()
-    df_data["Média 12m Diferença mensal"] = df_data['Diferença mensal'].rolling(12).mean()
-    df_data["Média 24m Diferença mensal"] = df_data['Diferença mensal'].rolling(54).mean()
+    # Estatísticas Gerais
+    expanderGeneralStats = st.expander("Estatísticas Gerais")
+    df_stats = calc_financial_metrics(df)
 
-    df_data["Evolução 6m Total"] = df_data['Valor'].rolling(6).apply(lambda x: x[-1] - x[0])
-    df_data["Evolução 12m Total"] = df_data['Valor'].rolling(12).apply(lambda x: x[-1] - x[0])
-    df_data["Evolução 24m Total"] = df_data['Valor'].rolling(54).apply(lambda x: x[-1] - x[0])
+    conlumns_config = {
+       "Valor":st.column_config.NumberColumn("Valor.", format="R$ %f"),
+       "Diferença mensal Abs.":st.column_config.NumberColumn("Diferença mensal Abs.", format="R$ %f"),
+       "Média 6m Diferença mensal Abs." :st.column_config.NumberColumn("Média 6m Diferença mensal Abs.", format="R$ %f"),
+       "Média 12m Diferença mensal Abs.":st.column_config.NumberColumn("Média 12m Diferença mensal Abs.", format="R$ %f"),
+       "Média 24m Diferença mensal Abs.":st.column_config.NumberColumn("Média 24m Diferença mensal Abs.", format="R$ %f"),
+       "Evolução 6m Total":st.column_config.NumberColumn("Evolução 6m Total", format="R$ %f"),
+       "Evolução 12m Total":st.column_config.NumberColumn("Evolução 12m Total", format="R$ %f"),
+       "Evolução 24m Total":st.column_config.NumberColumn("Evolução 24m Total", format="R$ %f"),
+       "Diferença mensal Rel.":st.column_config.NumberColumn("Diferença mensal Rel.", format="percent"),
+       "Evolução 6m Rel.":st.column_config.NumberColumn("Evolução 6m Rel.", format="percent"),
+       "Evolução 12m Rel.":st.column_config.NumberColumn("Evolução 12m Rel.", format="percent"),
+       "Evolução 24m Rel.":st.column_config.NumberColumn("Evolução 24m Rel.", format="percent")
 
-    st.dataframe(df_data)
+    }
+
+    expanderGeneralStats.dataframe(df_stats, column_config=conlumns_config)
     
-
-        
 
   
